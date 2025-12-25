@@ -1,12 +1,96 @@
 import express from "express";
+import fetch from "node-fetch";
+import crypto from "crypto";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const app = express();
 
+const {
+  SHOPIFY_API_KEY,
+  SHOPIFY_API_SECRET,
+  SHOPIFY_SCOPES,
+  SHOPIFY_APP_URL,
+} = process.env;
+
 app.get("/", (req, res) => {
-  res.send("Smart Search Fixer Backend Running");
+  res.send("Smart Search Fixer backend running");
+});
+
+/**
+ * STEP 1: Start OAuth
+ */
+app.get("/auth", (req, res) => {
+  const shop = req.query.shop;
+  if (!shop) {
+    return res.status(400).send("Missing shop parameter");
+  }
+
+  const state = crypto.randomBytes(16).toString("hex");
+  const redirectUri = `${SHOPIFY_APP_URL}/auth/callback`;
+
+  const installUrl =
+    `https://${shop}/admin/oauth/authorize` +
+    `?client_id=${SHOPIFY_API_KEY}` +
+    `&scope=${SHOPIFY_SCOPES}` +
+    `&redirect_uri=${redirectUri}` +
+    `&state=${state}`;
+
+  res.redirect(installUrl);
+});
+
+/**
+ * STEP 2: OAuth Callback
+ */
+app.get("/auth/callback", async (req, res) => {
+  const { shop, hmac, code } = req.query;
+
+  if (!shop || !hmac || !code) {
+    return res.status(400).send("Required parameters missing");
+  }
+
+  const map = { ...req.query };
+  delete map.hmac;
+
+  const message = Object.keys(map)
+    .sort()
+    .map((key) => `${key}=${map[key]}`)
+    .join("&");
+
+  const generatedHash = crypto
+    .createHmac("sha256", SHOPIFY_API_SECRET)
+    .update(message)
+    .digest("hex");
+
+  if (generatedHash !== hmac) {
+    return res.status(400).send("HMAC validation failed");
+  }
+
+  const tokenResponse = await fetch(
+    `https://${shop}/admin/oauth/access_token`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        client_id: SHOPIFY_API_KEY,
+        client_secret: SHOPIFY_API_SECRET,
+        code,
+      }),
+    }
+  );
+
+  const tokenData = await tokenResponse.json();
+
+  if (!tokenData.access_token) {
+    return res.status(500).send("Failed to get access token");
+  }
+
+  // ✅ OAuth success
+  res.send("✅ Smart Search Fixer installed successfully");
 });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log("Server running on port", PORT);
+  console.log(`Server running on port ${PORT}`);
 });
