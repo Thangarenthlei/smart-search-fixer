@@ -102,7 +102,12 @@ app.get("/auth/callback", async (req, res) => {
   // ✅ OAuth success
   res.send("✅ Smart Search Fixer installed successfully");
 });
-
+app.get("/api/test", (req, res) => {
+  res.json({
+    status: "ok",
+    message: "API route is working"
+  });
+});
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
