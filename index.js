@@ -44,11 +44,11 @@ app.get("/auth", (req, res) => {
   const redirectUri = `${SHOPIFY_APP_URL}/auth/callback`;
 
   const installUrl =
-    `https://${shop}/admin/oauth/authorize` +
-    `?client_id=${SHOPIFY_API_KEY}` +
-    `&scope=${SHOPIFY_SCOPES}` +
-    `&redirect_uri=${encodeURIComponent(redirectUri)} +
-    `&state=${state}`;
+  `https://${shop}/admin/oauth/authorize` +
+  `?client_id=${SHOPIFY_API_KEY}` +
+  `&scope=${SHOPIFY_SCOPES}` +
+  `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+  `&state=${state}`;
 
   res.redirect(installUrl);
 });
