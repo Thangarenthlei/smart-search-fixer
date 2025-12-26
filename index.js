@@ -41,7 +41,9 @@ app.get("/auth", (req, res) => {
   }
 
   const state = crypto.randomBytes(16).toString("hex");
-  const redirectUri = `${SHOPIFY_APP_URL}/auth/callback`;
+  const redirectUri = encodeURIComponent(
+  `${SHOPIFY_APP_URL}/auth/callback`
+);
 
   const installUrl =
     `https://${shop}/admin/oauth/authorize` +
