@@ -13,9 +13,22 @@ const {
   SHOPIFY_SCOPES,
   SHOPIFY_APP_URL,
 } = process.env;
-
 app.get("/", (req, res) => {
-  res.send("Smart Search Fixer backend running");
+  res.setHeader("Content-Type", "text/html");
+  res.send(`
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>Smart Search Fixer</title>
+        <meta charset="UTF-8" />
+      </head>
+      <body style="font-family: Arial; padding: 24px;">
+        <h1>Smart Search Fixer ✅</h1>
+        <p>Root route is working.</p>
+        <p>OAuth is already set up.</p>
+      </body>
+    </html>
+  `);
 });
 
 /**
