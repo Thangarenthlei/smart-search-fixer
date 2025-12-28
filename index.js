@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import { shopifyApi, LATEST_API_VERSION } from "@shopify/shopify-api";
+import { shopifyApi } from "@shopify/shopify-api";
 
 dotenv.config();
 
@@ -13,8 +13,6 @@ app.use(express.json());
 if (
   !process.env.SHOPIFY_API_KEY ||
   !process.env.SHOPIFY_API_SECRET ||
-  !process.env.APP_URL ||
-  !process.env.APP_HANDLE
 ) {
   console.error("❌ Missing required environment variables");
   process.exit(1);
@@ -25,9 +23,9 @@ const shopify = shopifyApi({
   apiKey: process.env.SHOPIFY_API_KEY,
   apiSecretKey: process.env.SHOPIFY_API_SECRET,
   scopes: ["read_products"],
-  hostName: process.env.APP_URL.replace(/^https?:\/\//, ""),
-  apiVersion: LATEST_API_VERSION,
-  isEmbeddedApp: false
+  hostName: "example.com",
+  apiVersion: "2025-01",
+  isEmbeddedApp: false,
 });
 
 /* ================= ROOT ROUTE (CRITICAL) ================= */
