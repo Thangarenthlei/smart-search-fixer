@@ -77,7 +77,9 @@ app.get("/auth/callback", async (req, res) => {
 app.get("/api/test", (req, res) => {
   res.json({ message: "API working correctly" });
 });
-
+app.get("/", (req, res) => {
+  res.send("Backend is live ✅");
+});
 /* ================= START SERVER ================= */
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
