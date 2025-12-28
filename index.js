@@ -1,114 +1,86 @@
 import express from "express";
-import fetch from "node-fetch";
-import crypto from "crypto";
+import cors from "cors";
 import dotenv from "dotenv";
+import { shopifyApi, LATEST_API_VERSION } from "@shopify/shopify-api";
 
 dotenv.config();
 
 const app = express();
+app.use(cors());
+app.use(express.json());
 
-const {
-  SHOPIFY_API_KEY,
-  SHOPIFY_API_SECRET,
-  SHOPIFY_SCOPES,
-  SHOPIFY_APP_URL,
-} = process.env;
+/* ================= REQUIRED ENV CHECK ================= */
+if (
+  !process.env.SHOPIFY_API_KEY ||
+  !process.env.SHOPIFY_API_SECRET ||
+  !process.env.APP_URL ||
+  !process.env.APP_HANDLE
+) {
+  console.error("❌ Missing required environment variables");
+  process.exit(1);
+}
+
+/* ================= SHOPIFY INIT ================= */
+const shopify = shopifyApi({
+  apiKey: process.env.SHOPIFY_API_KEY,
+  apiSecretKey: process.env.SHOPIFY_API_SECRET,
+  scopes: ["read_products"],
+  hostName: process.env.APP_URL.replace(/^https?:\/\//, ""),
+  apiVersion: LATEST_API_VERSION,
+  isEmbeddedApp: false
+});
+
+/* ================= ROOT ROUTE (CRITICAL) ================= */
 app.get("/", (req, res) => {
-  res.setHeader("Content-Type", "text/html");
-  res.send(`
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <title>Smart Search Fixer</title>
-        <meta charset="UTF-8" />
-      </head>
-      <body style="font-family: Arial; padding: 24px;">
-        <h1>Smart Search Fixer ✅</h1>
-        <p>Root route is working.</p>
-        <p>OAuth is already set up.</p>
-      </body>
-    </html>
-  `);
+  res.status(200).send("Smart Search Fixer backend is running");
 });
 
-/**
- * STEP 1: Start OAuth
- */
-app.get("/auth", (req, res) => {
-  const shop = req.query.shop;
-  if (!shop) {
-    return res.status(400).send("Missing shop parameter");
-  }
-
-  const state = crypto.randomBytes(16).toString("hex");
-  const redirectUri = `${SHOPIFY_APP_URL}/auth/callback`;
-
-  const installUrl =
-  `https://${shop}/admin/oauth/authorize` +
-  `?client_id=${SHOPIFY_API_KEY}` +
-  `&scope=${SHOPIFY_SCOPES}` +
-  `&redirect_uri=${encodeURIComponent(redirectUri)}` +
-  `&state=${state}`;
-
-  res.redirect(installUrl);
+/* ================= HEALTH CHECK ================= */
+app.get("/health", (req, res) => {
+  res.json({ status: "ok" });
 });
 
-/**
- * STEP 2: OAuth Callback
- */
-app.get("/auth/callback", async (req, res) => {
-  const { shop, hmac, code } = req.query;
+/* ================= AUTH START ================= */
+app.get("/auth", async (req, res) => {
+  const { shop } = req.query;
+  if (!shop) return res.status(400).send("Missing shop parameter");
 
-  if (!shop || !hmac || !code) {
-    return res.status(400).send("Required parameters missing");
-  }
-
-  const map = { ...req.query };
-  delete map.hmac;
-
-  const message = Object.keys(map)
-    .sort()
-    .map((key) => `${key}=${map[key]}`)
-    .join("&");
-
-  const generatedHash = crypto
-    .createHmac("sha256", SHOPIFY_API_SECRET)
-    .update(message)
-    .digest("hex");
-
-  if (generatedHash !== hmac) {
-    return res.status(400).send("HMAC validation failed");
-  }
-
-  const tokenResponse = await fetch(
-    `https://${shop}/admin/oauth/access_token`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        client_id: SHOPIFY_API_KEY,
-        client_secret: SHOPIFY_API_SECRET,
-        code,
-      }),
-    }
-  );
-
-  const tokenData = await tokenResponse.json();
-
-  if (!tokenData.access_token) {
-    return res.status(500).send("Failed to get access token");
-  }
-
-  // ✅ OAuth success
-  res.send("✅ Smart Search Fixer installed successfully");
-});
-app.get("/api/test", (req, res) => {
-  res.json({
-    status: "ok",
-    message: "API route is working"
+  const authRoute = await shopify.auth.begin({
+    shop,
+    callbackPath: "/auth/callback",
+    isOnline: false,
+    rawRequest: req,
+    rawResponse: res
   });
+
+  return authRoute;
 });
+
+/* ================= AUTH CALLBACK ================= */
+app.get("/auth/callback", async (req, res) => {
+  try {
+    const session = await shopify.auth.callback({
+      rawRequest: req,
+      rawResponse: res
+    });
+
+    // App is now installed successfully
+    return res.redirect(
+      `https://${session.shop}/admin/apps/${process.env.APP_HANDLE}`
+    );
+  } catch (error) {
+    console.error("OAuth error:", error);
+    return res.status(500).send("OAuth failed");
+  }
+});
+
+/* ================= TEST API ================= */
+app.get("/api/test", (req, res) => {
+  res.json({ message: "API working correctly" });
+});
+
+/* ================= START SERVER ================= */
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`✅ Server running on port ${PORT}`);
 });
