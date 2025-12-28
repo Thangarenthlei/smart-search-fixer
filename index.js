@@ -12,7 +12,7 @@ app.use(express.json());
 /* ================= REQUIRED ENV CHECK ================= */
 if (
   !process.env.SHOPIFY_API_KEY ||
-  !process.env.SHOPIFY_API_SECRET ||
+  !process.env.SHOPIFY_API_SECRET 
 ) {
   console.error("❌ Missing required environment variables");
   process.exit(1);
