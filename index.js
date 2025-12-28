@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import { shopifyApi } from "@shopify/shopify-api";
+import "@shopify/shopify-api/adapters/node";
 
 dotenv.config();
 
