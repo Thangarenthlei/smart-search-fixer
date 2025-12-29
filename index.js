@@ -3,13 +3,13 @@ import cors from "cors";
 import dotenv from "dotenv";
 import { shopifyApi } from "@shopify/shopify-api";
 import "@shopify/shopify-api/adapters/node";
-
+import searchProxy from "./routes/searchProxy.js";
 dotenv.config();
 
 const app = express();
 app.use(cors());
 app.use(express.json());
-
+app.use(searchProxy);
 /* ================= REQUIRED ENV CHECK ================= */
 if (
   !process.env.SHOPIFY_API_KEY ||
