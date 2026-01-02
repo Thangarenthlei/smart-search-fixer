@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import { shopifyApi } from "@shopify/shopify-api";
 import "@shopify/shopify-api/adapters/node";
 import searchProxy from "./routes/searchProxy.js";
+import authRoutes from "./routes/auth.js";
 dotenv.config();
 import mongoose from "mongoose";
 
@@ -20,6 +21,7 @@ mongoose
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use("/auth", authRoutes);
 app.get("/health", (req, res) => {
   res.status(200).json({
     status: "ok",
