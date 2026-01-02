@@ -5,7 +5,18 @@ import { shopifyApi } from "@shopify/shopify-api";
 import "@shopify/shopify-api/adapters/node";
 import searchProxy from "./routes/searchProxy.js";
 dotenv.config();
+import mongoose from "mongoose";
 
+console.log("MONGODB_URI exists:", !!process.env.MONGODB_URI);
+
+mongoose
+  .connect(process.env.MONGODB_URI)
+  .then(() => {
+    console.log("✅ MongoDB connected");
+  })
+  .catch((err) => {
+    console.error("❌ MongoDB connection error:", err.message);
+  });
 const app = express();
 app.use(cors());
 app.use(express.json());
