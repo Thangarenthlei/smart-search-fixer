@@ -21,10 +21,17 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(searchProxy);
-/* ================= REQUIRED ENV CHECK ================= */
+app.get("/health", (req, res) => {
+  res.status(200).json({
+    status: "ok",
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+  });
+});
+/* ============== REQUIRED ENV CHECK ============== */
 if (
   !process.env.SHOPIFY_API_KEY ||
-  !process.env.SHOPIFY_API_SECRET 
+  !process.env.SHOPIFY_API_SECRET
 ) {
   console.error("❌ Missing required environment variables");
   process.exit(1);
