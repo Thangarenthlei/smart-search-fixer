@@ -16,39 +16,36 @@ router.post("/analyze-search", async (req, res) => {
     }
 
     const prompt = `
-You are a friendly, concise Shopify search expert.
+You are a Shopify search expert.
 
 Search query:
 "${query}"
 
 Available products:
-${products.join(", ") || "No products found"}
+${products.length ? products.join(", ") : "No products"}
 
-Respond ONLY in JSON with this structure:
-{
-  "summary": "Short 2–3 sentence explanation",
-  "missing_keywords": ["keyword1", "keyword2"],
-  "suggested_actions": ["action1", "action2"]
-}
+In 2–3 short sentences:
+- Explain why this search might fail or succeed
+- Suggest how to improve it (keywords, synonyms, naming)
+
+Keep it simple and helpful.
 `;
 
     const response = await openai.responses.create({
       model: "gpt-4.1-mini",
       input: prompt,
       temperature: 0.3,
+      max_output_tokens: 150,
     });
 
-    const outputText =
+    const explanation =
       response.output_text ||
-      response.output?.[0]?.content?.[0]?.text;
+      response.output?.[0]?.content?.[0]?.text ||
+      "No explanation generated.";
 
-    if (!outputText) {
-      throw new Error("Empty AI response");
-    }
-
-    return res.json(JSON.parse(outputText));
+    return res.json({ explanation });
   } catch (err) {
-    console.error("AI ERROR:", err.message);
+    console.error("AI ERROR:", err);
     return res.status(500).json({ error: "AI analysis failed" });
   }
 });
