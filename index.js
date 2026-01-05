@@ -6,6 +6,7 @@ import "@shopify/shopify-api/adapters/node";
 import searchProxy from "./routes/searchProxy.js";
 import authRoutes from "./routes/auth.js";
 import searchAnalyticsRoutes from "./routes/searchAnalytics.js";
+import aiRoutes from "./routes/ai.js";
 
 dotenv.config();
 import mongoose from "mongoose";
@@ -24,6 +25,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use("/api", searchAnalyticsRoutes);
+app.use("/api/ai", aiRoutes); 
 app.use("/auth", authRoutes);
 app.get("/health", (req, res) => {
   res.status(200).json({
