@@ -3,7 +3,15 @@ import OpenAI from "openai";
 
 const router = express.Router();
 
-// Initialize OpenAI (v4 SDK)
+/**
+ * IMPORTANT
+ * Env key name MUST be:
+ * OPENAI_API_KEY=sk-xxxx
+ */
+if (!process.env.OPENAI_API_KEY) {
+  console.error("❌ OPENAI_API_KEY is missing");
+}
+
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
@@ -14,41 +22,39 @@ const openai = new OpenAI({
  * Body:
  * {
  *   "query": "blu jeans men",
- *   "products": ["Blue Jeans for Men", "Denim Pants", "Black Jeans"]
+ *   "products": ["Blue Jeans for Men", "Denim Pants"]
  * }
  */
 router.post("/analyze-search", async (req, res) => {
   try {
-    const { query, products } = req.body;
+    const { query, products = [] } = req.body;
 
-    if (!query || !Array.isArray(products)) {
-      return res.status(400).json({
-        error: "Missing or invalid query/products",
-      });
+    if (!query) {
+      return res.status(400).json({ error: "Missing search query" });
     }
 
     const prompt = `
-A customer searched for: "${query}"
+You are a friendly, patient teacher helping a Shopify store owner.
+
+Search query:
+"${query}"
 
 Available products:
-${products.map((p) => `- ${p}`).join("\n")}
+${products.join(", ")}
 
-Explain clearly and kindly:
-1. Why this search may return zero or poor results
-2. What is wrong with the search terms
-3. How the store owner can fix it (synonyms, naming, tags)
-
-Be friendly, simple, and explain like a good teacher helping a non-technical store owner.
+Explain:
+1. Why this search may fail or succeed
+2. What keywords are missing or mismatched
+3. How the merchant can rename products or add synonyms
+4. Keep it simple and encouraging
 `;
 
-    // ✅ CORRECT OpenAI v4 call
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
         {
           role: "system",
-          content:
-            "You are a friendly teacher who explains e-commerce search problems clearly and calmly.",
+          content: "You explain things clearly like a good teacher.",
         },
         {
           role: "user",
@@ -58,17 +64,16 @@ Be friendly, simple, and explain like a good teacher helping a non-technical sto
       temperature: 0.4,
     });
 
-    const explanation = completion.choices[0].message.content;
+    const explanation =
+      completion.choices?.[0]?.message?.content || "No explanation generated";
 
-    return res.json({
+    res.json({
       success: true,
       explanation,
     });
-  } catch (error) {
-    console.error("AI ERROR:", error);
-    return res.status(500).json({
-      error: "AI analysis failed",
-    });
+  } catch (err) {
+    console.error("❌ OpenAI error:", err.message);
+    res.status(500).json({ error: "AI analysis failed" });
   }
 });
 
