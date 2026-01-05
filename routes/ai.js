@@ -16,37 +16,32 @@ router.post("/analyze-search", async (req, res) => {
     }
 
     const prompt = `
-You are a Shopify search expert.
+You are a friendly Shopify search expert.
 
-Search query:
-"${query}"
+Search query: "${query}"
+Products: ${products.join(", ") || "No products"}
 
-Available products:
-${products.length ? products.join(", ") : "No products"}
+In 2–3 short sentences, explain:
+- Why this search may fail
+- One simple improvement the merchant can make
 
-In 2–3 short sentences:
-- Explain why this search might fail or succeed
-- Suggest how to improve it (keywords, synonyms, naming)
-
-Keep it simple and helpful.
+Be clear, friendly, and concise.
 `;
 
     const response = await openai.responses.create({
       model: "gpt-4.1-mini",
       input: prompt,
-      temperature: 0.3,
-      max_output_tokens: 150,
+      max_output_tokens: 120,
     });
 
     const explanation =
-      response.output_text ||
-      response.output?.[0]?.content?.[0]?.text ||
-      "No explanation generated.";
+      response.output_text?.trim() ||
+      "Search analysis completed, but no explanation was generated.";
 
-    return res.json({ explanation });
+    res.json({ explanation });
   } catch (err) {
     console.error("AI ERROR:", err);
-    return res.status(500).json({ error: "AI analysis failed" });
+    res.status(500).json({ error: "AI analysis failed" });
   }
 });
 
