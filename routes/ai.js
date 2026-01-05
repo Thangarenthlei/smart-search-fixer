@@ -4,25 +4,20 @@ import OpenAI from "openai";
 const router = express.Router();
 
 /**
- * IMPORTANT
- * Env key name MUST be:
+ * OpenAI client
+ * Make sure ENV variable exists:
  * OPENAI_API_KEY=sk-xxxx
  */
-if (!process.env.OPENAI_API_KEY) {
-  console.error("❌ OPENAI_API_KEY is missing");
-}
-
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
 /**
  * POST /api/ai/analyze-search
- *
  * Body:
  * {
  *   "query": "blu jeans men",
- *   "products": ["Blue Jeans for Men", "Denim Pants"]
+ *   "products": ["Blue Jeans for Men", "Black Jeans"]
  * }
  */
 router.post("/analyze-search", async (req, res) => {
@@ -33,20 +28,25 @@ router.post("/analyze-search", async (req, res) => {
       return res.status(400).json({ error: "Missing search query" });
     }
 
+    // ✅ PROMPT (short + structured)
     const prompt = `
-You are a friendly, patient teacher helping a Shopify store owner.
+You are a friendly, patient Shopify search expert.
 
-Search query:
-"${query}"
+Respond ONLY in valid JSON using this exact format:
+{
+  "summary": "One short sentence (max 20 words)",
+  "main_issues": ["Issue 1", "Issue 2"],
+  "recommended_fixes": ["Fix 1", "Fix 2"],
+  "confidence": "Low | Medium | High"
+}
 
-Available products:
-${products.join(", ")}
+Rules:
+- Be concise
+- Be encouraging
+- No extra text outside JSON
 
-Explain:
-1. Why this search may fail or succeed
-2. What keywords are missing or mismatched
-3. How the merchant can rename products or add synonyms
-4. Keep it simple and encouraging
+Search query: "${query}"
+Available products: ${products.join(", ")}
 `;
 
     const completion = await openai.chat.completions.create({
@@ -61,19 +61,18 @@ Explain:
           content: prompt,
         },
       ],
-      temperature: 0.4,
+      temperature: 0.3,
     });
 
-    const explanation =
-      completion.choices?.[0]?.message?.content || "No explanation generated";
+    const raw = completion.choices[0].message.content;
 
-    res.json({
-      success: true,
-      explanation,
-    });
-  } catch (err) {
-    console.error("❌ OpenAI error:", err.message);
-    res.status(500).json({ error: "AI analysis failed" });
+    // ✅ Ensure valid JSON response
+    const parsed = JSON.parse(raw);
+
+    return res.json(parsed);
+  } catch (error) {
+    console.error("AI ERROR:", error);
+    return res.status(500).json({ error: "AI analysis failed" });
   }
 });
 
